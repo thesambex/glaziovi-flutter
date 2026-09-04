@@ -1,0 +1,18 @@
+{
+  "startHint": "Start",
+  "okHint": "OK",
+  "errorTitle": "Something went wrong",
+  "pauseHint": "Pause",
+  "resumeHint": "Resume",
+  "finishHint": "Finish",
+  "resetHint": "New activity",
+  "timeHint": "Time",
+  "kilometersHint": "Kilometers",
+  "locationServiceDisabledError": "Enable device location",
+  "locationPermissionDeniedError": "Location permission denied",
+  "locationPermissionDeniedForeverError": "Location permission permanently denied, enable it in the device settings",
+  "backgroundLocationPermissionDeniedError": "Enable background location permission to record activity in background",
+  "unknownError": "Something went wrong, please try again",
+  "recordingNotificationTitle": "Activity in progress",
+  "recordingNotificationText": "Glaziovi is recording your location."
+}
