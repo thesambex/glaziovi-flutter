@@ -25,6 +25,11 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
 
   @override
   ActivityState build() {
+    ref.onDispose(() {
+      _elapsedTimer?.cancel();
+      _positionSubscription?.cancel();
+    });
+
     return const ActivityState();
   }
 
