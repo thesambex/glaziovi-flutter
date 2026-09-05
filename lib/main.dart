@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:glaziovi/database/database_provider.dart';
 import 'package:glaziovi/features/activity-recorder/activity_recorder_page.dart';
 import 'package:glaziovi/features/home/home_page.dart';
 import 'package:glaziovi/l10n/app_localizations.dart';
@@ -40,8 +44,25 @@ class _AppState extends ConsumerState<App> {
   @override
   void initState() {
     super.initState();
+    unawaited(_bootstrap());
+  }
 
-    _bootstrap();
+  // TODO: Create splash screen while dependencies are initializing
+  Future<void> _bootstrap() async {
+    try {
+      await _loadDependencies();
+    } catch (error, stackTrace) {
+      developer.log(
+        'Failed to load app dependencies',
+        name: 'glaziovi.app.bootstrap',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _loadDependencies() async {
+    await ref.read(databaseProvider.future);
   }
 
   @override
@@ -58,10 +79,4 @@ class _AppState extends ConsumerState<App> {
       locale: ref.watch(appLocaleProvider),
     );
   }
-
-  Future<void> _bootstrap() async {
-    await _loadDependencies();
-  }
-
-  Future<void> _loadDependencies() async {}
 }

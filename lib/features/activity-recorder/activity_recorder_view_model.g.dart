@@ -42,7 +42,7 @@ final class ActivityRecorderViewModelProvider
 }
 
 String _$activityRecorderViewModelHash() =>
-    r'58477588627b8a14d4a0e3ae1f07d8b49acc2d40';
+    r'f3baaad0193ac2b7418d46ac581cba4449874c2e';
 
 abstract class _$ActivityRecorderViewModel extends $Notifier<ActivityState> {
   ActivityState build();

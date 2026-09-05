@@ -3,6 +3,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:glaziovi/activity/actitivy_buffer.dart';
+import 'package:glaziovi/activity/activity_data.dart';
+import 'package:glaziovi/activity/activity_event.dart';
+import 'package:glaziovi/activity/activity_sport_type.dart';
+import 'package:glaziovi/activity/activity_sub_sport_type.dart';
+import 'package:glaziovi/activity/data-access/activity_dao.dart';
 import 'package:glaziovi/features/activity-recorder/activity_recorder_state.dart';
 import 'package:glaziovi/l10n/l10n_providers.dart';
 import 'package:latlong2/latlong.dart';
@@ -28,9 +34,41 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     ref.onDispose(() {
       _elapsedTimer?.cancel();
       _positionSubscription?.cancel();
+      _activityBuffer?.dispose();
     });
 
     return const ActivityState();
+  }
+
+  ActivityData? _activityData;
+  ActivityBuffer? _activityBuffer;
+
+  Future<void> createActivity(
+    ActivitySportType sportType,
+    ActivitySubSportType subSport,
+  ) async {
+    final activityDao = await ref.read(activityDAOProvider.future);
+
+    _activityData = ActivityData(
+      id: 0,
+      sport: sportType.value,
+      subSport: subSport.value,
+      startedAtMs: -1,
+      finishedAtMs: null,
+      elapsedMs: 0,
+      timerMs: 0,
+      distanceM: 0,
+      status: ActivityRecordStatus.paused,
+      lastSeq: 0,
+    );
+
+    _activityData = await activityDao.createData(_activityData!);
+
+    _activityBuffer = ActivityBuffer(
+      activityId: _activityData!.id,
+      activityDao: activityDao,
+      startSeq: 0,
+    );
   }
 
   Future<void> initialize() async {
@@ -102,11 +140,18 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     await _positionSubscription?.cancel();
     _positionSubscription = null;
 
+    _activityBuffer?.addEvent(
+      ActivityEventType.timerStop,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+
     state = state.copyWith(
       status: ActivityStatus.paused,
       previousPosition: state.currentPosition,
     );
   }
+
+  // TODO: Create auto lap
 
   Future<void> resume() async {
     if (state.status != ActivityStatus.paused) return;
@@ -115,6 +160,11 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       await _ensureLocationPermission();
 
       _recordingStartedAt = DateTime.now();
+
+      _activityBuffer?.addEvent(
+        ActivityEventType.timerStart,
+        DateTime.now().millisecondsSinceEpoch,
+      );
 
       state = state.copyWith(
         status: ActivityStatus.recording,
@@ -244,6 +294,14 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       previousPosition: position,
       distanceMeters: distanceMeters,
       route: [...state.route, LatLng(position.latitude, position.longitude)],
+    );
+
+    _activityBuffer?.addPoint(
+      timestampMs: DateTime.now().millisecondsSinceEpoch,
+      latitude: position.latitude,
+      longitude: position.longitude,
+      altitudeM: position.altitude > 0 ? position.altitude : null,
+      cumulativeDistanceM: distanceMeters,
     );
   }
 
