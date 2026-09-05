@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:glaziovi/activity/actitivy_buffer.dart';
 import 'package:glaziovi/activity/activity_data.dart';
+import 'package:glaziovi/activity/activity_sport.dart';
 import 'package:glaziovi/activity/activity_event.dart';
 import 'package:glaziovi/activity/activity_sport_type.dart';
 import 'package:glaziovi/activity/activity_sub_sport_type.dart';
@@ -28,6 +29,9 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   Duration _elapsedBeforeCurrentRecording = Duration.zero;
 
   bool _isInitialized = false;
+  bool _isStarting = false;
+
+  bool get isReady => state.isReady;
 
   @override
   ActivityState build() {
@@ -42,14 +46,84 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
 
   ActivityData? _activityData;
   ActivityBuffer? _activityBuffer;
+  Future<void>? _restoration;
+
+  Future<void> _restoreActivity() => _restoration ??= _loadActivity();
+
+  Future<void> _loadActivity() async {
+    try {
+      final dao = await ref.read(activityDAOProvider.future);
+      final data = await dao.findUnfinished();
+      if (data == null) return;
+      final points = await dao.getTrackPoints(data.id);
+      await dao.updateLifecycle(
+        data.id,
+        status: ActivityRecordStatus.paused,
+        startedAtMs: data.startedAtMs,
+      );
+      _activityData = data.copyWith(status: ActivityRecordStatus.paused);
+      _activityBuffer = ActivityBuffer(
+        activityId: data.id,
+        activityDao: dao,
+        startSeq: points.isEmpty ? 0 : points.last.seq + 1,
+      );
+      _elapsedBeforeCurrentRecording = Duration(milliseconds: data.timerMs);
+      state = state.copyWith(
+        status: data.startedAtMs < 0
+            ? ActivityStatus.idle
+            : ActivityStatus.paused,
+        startedAt: data.startedAtMs < 0
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(data.startedAtMs),
+        elapsed: _elapsedBeforeCurrentRecording,
+        selectedSport: ActivitySport.fromFit(data.sport, data.subSport),
+        distanceMeters: data.distanceM,
+        route: points
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList(),
+        clearPreviousPosition: true,
+      );
+      _updateBufferTotals();
+    } catch (_) {
+      _restoration = null;
+      rethrow;
+    }
+  }
+
+  void _updateBufferTotals() {
+    final startedAt = state.startedAt;
+    _activityBuffer?.updateTotals(
+      elapsed: startedAt == null
+          ? Duration.zero
+          : (state.finishedAt ?? DateTime.now()).difference(startedAt),
+      timer: state.elapsed,
+      distanceM: state.distanceMeters,
+    );
+  }
+
+  Future<void> _saveLifecycle(ActivityRecordStatus status) async {
+    final data = _activityData;
+    if (data == null) return;
+    _updateBufferTotals();
+    await _activityBuffer?.flush();
+    final dao = await ref.read(activityDAOProvider.future);
+    await dao.updateLifecycle(
+      data.id,
+      status: status,
+      startedAtMs: state.startedAt?.millisecondsSinceEpoch ?? -1,
+      finishedAtMs: state.finishedAt?.millisecondsSinceEpoch,
+    );
+  }
 
   Future<void> createActivity(
     ActivitySportType sportType,
     ActivitySubSportType subSport,
   ) async {
+    await _restoreActivity();
+    if (_activityData != null) return;
     final activityDao = await ref.read(activityDAOProvider.future);
 
-    _activityData = ActivityData(
+    final data = ActivityData(
       id: 0,
       sport: sportType.value,
       subSport: subSport.value,
@@ -59,15 +133,18 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       timerMs: 0,
       distanceM: 0,
       status: ActivityRecordStatus.paused,
-      lastSeq: 0,
+      lastSeq: -1,
     );
 
-    _activityData = await activityDao.createData(_activityData!);
+    _activityData = await activityDao.createData(data);
 
     _activityBuffer = ActivityBuffer(
       activityId: _activityData!.id,
       activityDao: activityDao,
       startSeq: 0,
+    );
+    state = state.copyWith(
+      selectedSport: ActivitySport.of(sportType, subSport),
     );
   }
 
@@ -79,6 +156,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     state = state.copyWith(isLoadingLocation: true, clearError: true);
 
     try {
+      await _restoreActivity();
       await _ensureLocationPermission();
 
       final lastPosition = await Geolocator.getLastKnownPosition();
@@ -104,25 +182,43 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   }
 
   Future<void> start() async {
+    if (_isStarting) return;
+    _isStarting = true;
     try {
+      await _restoreActivity();
+      if (state.status != ActivityStatus.idle || !state.isReady) return;
       await _ensureLocationPermission();
 
       if (Platform.isAndroid) {
         await Permission.notification.request();
       }
 
-      _recordingStartedAt = DateTime.now();
+      final startedAt = DateTime.now();
+      final dao = await ref.read(activityDAOProvider.future);
+      await dao.updateLifecycle(
+        _activityData!.id,
+        status: ActivityRecordStatus.recording,
+        startedAtMs: startedAt.millisecondsSinceEpoch,
+      );
+      _recordingStartedAt = startedAt;
 
       state = state.copyWith(
         status: ActivityStatus.recording,
-        previousPosition: state.currentPosition,
+        startedAt: _recordingStartedAt,
+        clearPreviousPosition: true,
         clearError: true,
       );
 
       _startElapsedTimer();
+      await _activityBuffer?.addEvent(
+        ActivityEventType.timerStart,
+        startedAt.millisecondsSinceEpoch,
+      );
       await _startPositionStream();
     } catch (error, stackTrace) {
       _handleError(error, stackTrace);
+    } finally {
+      _isStarting = false;
     }
   }
 
@@ -140,15 +236,17 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     await _positionSubscription?.cancel();
     _positionSubscription = null;
 
-    _activityBuffer?.addEvent(
+    _updateBufferTotals();
+    await _activityBuffer?.addEvent(
       ActivityEventType.timerStop,
       DateTime.now().millisecondsSinceEpoch,
     );
 
     state = state.copyWith(
       status: ActivityStatus.paused,
-      previousPosition: state.currentPosition,
+      clearPreviousPosition: true,
     );
+    await _saveLifecycle(ActivityRecordStatus.paused);
   }
 
   // TODO: Create auto lap
@@ -161,18 +259,20 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
 
       _recordingStartedAt = DateTime.now();
 
-      _activityBuffer?.addEvent(
+      _updateBufferTotals();
+      await _activityBuffer?.addEvent(
         ActivityEventType.timerStart,
         DateTime.now().millisecondsSinceEpoch,
       );
 
       state = state.copyWith(
         status: ActivityStatus.recording,
-        previousPosition: state.currentPosition,
+        clearPreviousPosition: true,
         clearError: true,
       );
 
       _startElapsedTimer();
+      await _saveLifecycle(ActivityRecordStatus.recording);
       await _startPositionStream();
     } catch (error, stackTrace) {
       _handleError(error, stackTrace);
@@ -180,6 +280,9 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   }
 
   Future<void> finish() async {
+    if (state.status != ActivityStatus.paused || state.startedAt == null) {
+      return;
+    }
     _updateElapsed();
 
     _elapsedTimer?.cancel();
@@ -191,10 +294,15 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     _recordingStartedAt = null;
     _elapsedBeforeCurrentRecording = Duration.zero;
 
-    state = state.copyWith(status: ActivityStatus.finished);
+    state = state.copyWith(
+      status: ActivityStatus.finished,
+      finishedAt: DateTime.now(),
+    );
+    await _saveLifecycle(ActivityRecordStatus.finished);
   }
 
   Future<void> reset() async {
+    if (state.hasStarted) await _saveLifecycle(ActivityRecordStatus.aborted);
     _elapsedTimer?.cancel();
     await _positionSubscription?.cancel();
 
@@ -203,6 +311,9 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     _recordingStartedAt = null;
     _elapsedBeforeCurrentRecording = Duration.zero;
 
+    await _activityBuffer?.dispose();
+    _activityBuffer = null;
+    _activityData = null;
     state = ActivityState(currentPosition: state.currentPosition);
   }
 
@@ -296,6 +407,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       route: [...state.route, LatLng(position.latitude, position.longitude)],
     );
 
+    _updateElapsed();
     _activityBuffer?.addPoint(
       timestampMs: DateTime.now().millisecondsSinceEpoch,
       latitude: position.latitude,
@@ -330,10 +442,12 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   void _startElapsedTimer() {
     _elapsedTimer?.cancel();
 
-    _elapsedTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => _updateElapsed(),
-    );
+    _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _updateElapsed();
+      if (timer.tick % 30 == 0) {
+        unawaited(_checkpoint());
+      }
+    });
 
     _updateElapsed();
   }
@@ -346,6 +460,15 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       elapsed:
           _elapsedBeforeCurrentRecording + DateTime.now().difference(startedAt),
     );
+    _updateBufferTotals();
+  }
+
+  Future<void> _checkpoint() async {
+    try {
+      await _activityBuffer?.flush();
+    } catch (error, stackTrace) {
+      _handleError(error, stackTrace);
+    }
   }
 
   Future<void> _ensureLocationPermission() async {

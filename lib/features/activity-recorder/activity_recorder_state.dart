@@ -1,5 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:glaziovi/activity/activity_sport.dart';
 
 enum ActivityView { map, metrics }
 
@@ -31,8 +32,11 @@ class ActivityState {
     this.route = const [],
     this.distanceMeters = 0,
     this.elapsed = Duration.zero,
+    this.startedAt,
+    this.finishedAt,
     this.isLoadingLocation = false,
     this.error,
+    this.selectedSport,
   });
 
   final ActivityView view;
@@ -44,9 +48,18 @@ class ActivityState {
 
   final double distanceMeters;
   final Duration elapsed;
+  final DateTime? startedAt;
+  final DateTime? finishedAt;
+
+  /// Average over recorded time; pauses and time offline are excluded.
+  double get averageSpeedKmh => elapsed.inMilliseconds <= 0
+      ? 0
+      : distanceMeters * 3600 / elapsed.inMilliseconds;
 
   final bool isLoadingLocation;
   final ActivityError? error;
+  final ActivitySport? selectedSport;
+  bool get isReady => selectedSport != null;
 
   bool get isRecording => status == ActivityStatus.recording;
 
@@ -61,20 +74,29 @@ class ActivityState {
     List<LatLng>? route,
     double? distanceMeters,
     Duration? elapsed,
+    DateTime? startedAt,
+    DateTime? finishedAt,
     bool? isLoadingLocation,
     ActivityError? error,
+    ActivitySport? selectedSport,
     bool clearError = false,
+    bool clearPreviousPosition = false,
   }) {
     return ActivityState(
       view: view ?? this.view,
       status: status ?? this.status,
       currentPosition: currentPosition ?? this.currentPosition,
-      previousPosition: previousPosition ?? this.previousPosition,
+      previousPosition: clearPreviousPosition
+          ? null
+          : previousPosition ?? this.previousPosition,
       route: route ?? this.route,
       distanceMeters: distanceMeters ?? this.distanceMeters,
       elapsed: elapsed ?? this.elapsed,
+      startedAt: startedAt ?? this.startedAt,
+      finishedAt: finishedAt ?? this.finishedAt,
       isLoadingLocation: isLoadingLocation ?? this.isLoadingLocation,
       error: clearError ? null : error ?? this.error,
+      selectedSport: selectedSport ?? this.selectedSport,
     );
   }
 }

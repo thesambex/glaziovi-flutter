@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,10 +9,13 @@ import 'package:glaziovi/features/activity-recorder/activity_recorder_state.dart
 import 'package:glaziovi/features/activity-recorder/activity_recorder_view_model.dart';
 import 'package:glaziovi/l10n/app_localizations.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:intl/intl.dart';
+import 'package:glaziovi/activity/activity_sport.dart';
+import 'package:glaziovi/features/activity-recorder/activity_sport_picker.dart';
 
 const _initialCenter = LatLng(-13.007316938533874, -41.376938721927566);
-const _initialZoom = 12.0;
-const _userZoom = 17.0;
+const _initialZoom = 13.0;
+const _userZoom = 15.0;
 
 class ActivityRecorderPage extends ConsumerStatefulWidget {
   const ActivityRecorderPage({super.key});
@@ -38,7 +43,13 @@ class _ActivityRecorderState extends ConsumerState<ActivityRecorderPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(activityRecorderViewModelProvider);
+    ref.watch(
+      activityRecorderViewModelProvider.select(
+        (state) =>
+            (state.view, state.status, state.currentPosition, state.route),
+      ),
+    );
+    final state = ref.read(activityRecorderViewModelProvider);
 
     ref.listen(
       activityRecorderViewModelProvider.select(
@@ -60,7 +71,10 @@ class _ActivityRecorderState extends ConsumerState<ActivityRecorderPage> {
       },
     );
 
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
+      appBar: AppBar(title: Text(l10n.activityHint), centerTitle: true),
       body: SafeArea(
         child: Stack(
           children: [
@@ -73,16 +87,22 @@ class _ActivityRecorderState extends ConsumerState<ActivityRecorderPage> {
                     state: state,
                     onMapReady: _onMapReady,
                   ),
-                  _MetricsView(state: state),
                 ],
               ),
             ),
 
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 24,
-              child: _ActivityControls(state: state),
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _ActivityDuration(),
+            ),
+
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _ActivityControls(),
             ),
           ],
         ),
@@ -199,74 +219,304 @@ class _MapView extends StatelessWidget {
   }
 }
 
-class _MetricsView extends StatelessWidget {
-  const _MetricsView({required this.state});
+class _ActivityDuration extends ConsumerStatefulWidget {
+  const _ActivityDuration();
 
-  final ActivityState state;
+  @override
+  ConsumerState<_ActivityDuration> createState() => _ActivityDurationState();
+}
 
-  // TODO: Create metrics view
+class _ActivityDurationState extends ConsumerState<_ActivityDuration> {
+  Timer? _timer;
+  bool _isSelectingSport = false;
+
+  Future<void> _selectSport() async {
+    if (_isSelectingSport) return;
+    setState(() => _isSelectingSport = true);
+    try {
+      final selected = await showModalBottomSheet<ActivitySport>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        showDragHandle: true,
+        builder: (context) => FractionallySizedBox(
+          heightFactor: 0.8,
+          child: const ActivitySportPicker(),
+        ),
+      );
+      if (selected == null || !mounted) return;
+      await ref
+          .read(activityRecorderViewModelProvider.notifier)
+          .createActivity(selected.sport!, selected.subSport!);
+    } catch (_) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ActivityError.unknown.message(l10n))),
+      );
+    } finally {
+      if (mounted) setState(() => _isSelectingSport = false);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual(
+      activityRecorderViewModelProvider.select(
+        (state) => (state.startedAt, state.finishedAt),
+      ),
+      (previous, current) {
+        _timer?.cancel();
+        if (current.$1 != null && current.$2 == null) {
+          _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+            setState(() {});
+          });
+        }
+      },
+      fireImmediately: true,
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(color: Theme.of(context).colorScheme.surface);
+    final l10n = AppLocalizations.of(context)!;
+
+    final (startedAt, finishedAt) = ref.watch(
+      activityRecorderViewModelProvider.select(
+        (state) => (state.startedAt, state.finishedAt),
+      ),
+    );
+    final duration = startedAt == null
+        ? Duration.zero
+        : (finishedAt ?? DateTime.now()).difference(startedAt);
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+
+    final selectedSport = ref.watch(
+      activityRecorderViewModelProvider.select((state) => state.selectedSport),
+    );
+
+    return ColoredBox(
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          spacing: 12,
+          children: [
+            selectedSport != null
+                ? Text(
+                    '${selectedSport.sport?.label(l10n) ?? l10n.activityTypeGeneric} · ${selectedSport.subSport?.label(l10n) ?? l10n.activitySubTypeGeneric}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  )
+                : InkWell(
+                    onTap: _isSelectingSport ? null : _selectSport,
+                    child: Text(
+                      l10n.activitySelectSport,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.timeHint,
+                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                ),
+
+                Text(
+                  '$hours:$minutes:$seconds',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 32,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
-class _ActivityControls extends ConsumerWidget {
-  const _ActivityControls({required this.state});
-
-  final ActivityState state;
+class _ActivityControls extends ConsumerStatefulWidget {
+  const _ActivityControls();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final viewModel = ref.read(activityRecorderViewModelProvider.notifier);
+  ConsumerState<_ActivityControls> createState() => _ActivityControlsState();
+}
 
+class _ActivityControlsState extends ConsumerState<_ActivityControls> {
+  bool _isExecuting = false;
+
+  Future<void> _execute(Future<void> Function() action) async {
+    if (_isExecuting) return;
+    setState(() => _isExecuting = true);
+    try {
+      await action();
+    } catch (_) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ActivityError.unknown.message(l10n))),
+      );
+    } finally {
+      if (mounted) setState(() => _isExecuting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Tooltip(
-          message: switch (state.status) {
-            ActivityStatus.idle => l10n.startHint,
-            ActivityStatus.recording => l10n.pauseHint,
-            ActivityStatus.paused => l10n.resumeHint,
-            ActivityStatus.finished => l10n.resetHint,
-          },
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              shape: const CircleBorder(),
-              padding: const EdgeInsets.all(24),
+    final (status, distanceMeters, averageSpeedKmh, startedAt, isLoading) = ref
+        .watch(
+          activityRecorderViewModelProvider.select(
+            (state) => (
+              state.status,
+              state.distanceMeters,
+              state.averageSpeedKmh,
+              state.startedAt,
+              state.isLoadingLocation,
             ),
-            onPressed: switch (state.status) {
-              ActivityStatus.idle => viewModel.start,
-              ActivityStatus.recording => viewModel.pause,
-              ActivityStatus.paused => viewModel.resume,
-              ActivityStatus.finished => viewModel.reset,
-            },
-            child: Icon(switch (state.status) {
-              ActivityStatus.idle => Icons.play_arrow_rounded,
-              ActivityStatus.recording => Icons.pause_rounded,
-              ActivityStatus.paused => Icons.play_arrow_rounded,
-              ActivityStatus.finished => Icons.sync_rounded,
-            }, size: 42),
+          ),
+        );
+
+    final viewModel = ref.read(activityRecorderViewModelProvider.notifier);
+    final isReady = ref.watch(
+      activityRecorderViewModelProvider.select((state) => state.isReady),
+    );
+    final format = NumberFormat('0.00', l10n.localeName);
+    final isDisabled =
+        _isExecuting ||
+        isLoading ||
+        (status == ActivityStatus.idle && !isReady);
+
+    final action = switch (status) {
+      ActivityStatus.idle => viewModel.start,
+      ActivityStatus.recording => viewModel.pause,
+      ActivityStatus.paused => viewModel.resume,
+      ActivityStatus.finished => viewModel.reset,
+    };
+
+    final actionLabel = switch (status) {
+      ActivityStatus.idle => l10n.startHint,
+      ActivityStatus.recording => l10n.pauseHint,
+      ActivityStatus.paused => l10n.resumeHint,
+      ActivityStatus.finished => l10n.resetHint,
+    };
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ColoredBox(
+          color: Colors.white,
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // TODO: add dynamic unit types
+                Column(
+                  children: [
+                    Text(
+                      l10n.distanceWithUnitHint('Km'),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      format.format(distanceMeters / 1000),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(
+                  height: 48,
+                  child: VerticalDivider(color: Color(0xff9D9D9D)),
+                ),
+
+                Column(
+                  children: [
+                    Text(
+                      l10n.avgSpeedWithUnitHint('Km/h'),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      format.format(averageSpeedKmh),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
 
-        if (state.status == ActivityStatus.paused) ...[
-          const SizedBox(width: 16),
-          Tooltip(
-            message: l10n.finishHint,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                shape: const CircleBorder(),
-                padding: const EdgeInsets.all(24),
-              ),
-              onPressed: viewModel.finish,
-              child: const Icon(Icons.stop_rounded, size: 24),
+        ColoredBox(
+          color: Theme.of(context).colorScheme.primary,
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              spacing: 16,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    foregroundColor: Color(0xff3B3B3B),
+                    backgroundColor: Colors.white,
+                  ),
+                  onPressed: isDisabled ? null : () => _execute(action),
+                  child: Text(actionLabel),
+                ),
+
+                if (status == ActivityStatus.paused && startedAt != null)
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Color(0xff3B3B3B),
+                    ),
+                    onPressed: isDisabled
+                        ? null
+                        : () => _execute(viewModel.finish),
+                    child: Text(l10n.finishHint),
+                  ),
+              ],
             ),
           ),
-        ],
+        ),
       ],
     );
   }

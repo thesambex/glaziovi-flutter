@@ -148,6 +148,12 @@ abstract class AppLocalizations {
   /// **'Kilometers'**
   String get kilometersHint;
 
+  /// No description provided for @activityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get activityHint;
+
   /// No description provided for @locationServiceDisabledError.
   ///
   /// In en, this message translates to:
@@ -189,6 +195,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Glaziovi is recording your location.'**
   String get recordingNotificationText;
+
+  /// Distance label with unit
+  ///
+  /// In en, this message translates to:
+  /// **'Distance ({unit})'**
+  String distanceWithUnitHint(String unit);
+
+  /// Average speed with unit
+  ///
+  /// In en, this message translates to:
+  /// **'AVG Speed ({unit})'**
+  String avgSpeedWithUnitHint(String unit);
+
+  /// No description provided for @activitySelectSport.
+  ///
+  /// In en, this message translates to:
+  /// **'Select sport'**
+  String get activitySelectSport;
+
+  /// No description provided for @activityTypeCycling.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycling'**
+  String get activityTypeCycling;
+
+  /// No description provided for @activityTypeGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Other sports'**
+  String get activityTypeGeneric;
+
+  /// No description provided for @activityTypeFitnessEquipment.
+  ///
+  /// In en, this message translates to:
+  /// **'Fitness equipment'**
+  String get activityTypeFitnessEquipment;
+
+  /// No description provided for @activitySubTypeTreadmill.
+  ///
+  /// In en, this message translates to:
+  /// **'Treadmill'**
+  String get activitySubTypeTreadmill;
+
+  /// No description provided for @activitySubTypeIndoorWalking.
+  ///
+  /// In en, this message translates to:
+  /// **'Indoor walking'**
+  String get activitySubTypeIndoorWalking;
+
+  /// No description provided for @activitySubTypeSpeedWalking.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed walking'**
+  String get activitySubTypeSpeedWalking;
+
+  /// No description provided for @activitySubTypeSpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Spinning'**
+  String get activitySubTypeSpin;
+
+  /// No description provided for @activitySubTypeIndoorCycling.
+  ///
+  /// In en, this message translates to:
+  /// **'Indoor cycling'**
+  String get activitySubTypeIndoorCycling;
+
+  /// No description provided for @activityTypeRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running'**
+  String get activityTypeRunning;
+
+  /// No description provided for @activityTypeWalking.
+  ///
+  /// In en, this message translates to:
+  /// **'Walking'**
+  String get activityTypeWalking;
+
+  /// No description provided for @activitySubTypeGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Traditional'**
+  String get activitySubTypeGeneric;
+
+  /// No description provided for @activitySubTypeRunStreet.
+  ///
+  /// In en, this message translates to:
+  /// **'Street running'**
+  String get activitySubTypeRunStreet;
+
+  /// No description provided for @activitySubTypeRunTrail.
+  ///
+  /// In en, this message translates to:
+  /// **'Trail running'**
+  String get activitySubTypeRunTrail;
+
+  /// No description provided for @activitySubTypeRunTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Track running'**
+  String get activitySubTypeRunTrack;
+
+  /// No description provided for @activitySubTypeWalkCasual.
+  ///
+  /// In en, this message translates to:
+  /// **'Casual walking'**
+  String get activitySubTypeWalkCasual;
+
+  /// No description provided for @activitySubTypeCycleRoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Road'**
+  String get activitySubTypeCycleRoad;
+
+  /// No description provided for @activitySubTypeCycleMountain.
+  ///
+  /// In en, this message translates to:
+  /// **'Mountain bike'**
+  String get activitySubTypeCycleMountain;
 }
 
 class _AppLocalizationsDelegate

@@ -92,15 +92,16 @@ class ActivityBuffer {
 
     final next = previous == null
         ? _doFlush()
-        : previous.then((_) => _doFlush());
+        : previous.then(
+            (_) => _doFlush(),
+            onError: (Object _, StackTrace _) => _doFlush(),
+          );
     _inFlight = next;
 
     return next;
   }
 
   Future<void> _doFlush() async {
-    if (_pendingTrackPoints.isEmpty) return;
-
     final points = List<ActivityTrackPoint>.of(_pendingTrackPoints);
     final events = List<ActivityEvent>.of(_pendingEvents);
 

@@ -37,6 +37,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kilometersHint => 'Kilometers';
 
   @override
+  String get activityHint => 'Activity';
+
+  @override
   String get locationServiceDisabledError => 'Enable device location';
 
   @override
@@ -59,4 +62,68 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recordingNotificationText =>
       'Glaziovi is recording your location.';
+
+  @override
+  String distanceWithUnitHint(String unit) {
+    return 'Distance ($unit)';
+  }
+
+  @override
+  String avgSpeedWithUnitHint(String unit) {
+    return 'AVG Speed ($unit)';
+  }
+
+  @override
+  String get activitySelectSport => 'Select sport';
+
+  @override
+  String get activityTypeCycling => 'Cycling';
+
+  @override
+  String get activityTypeGeneric => 'Other sports';
+
+  @override
+  String get activityTypeFitnessEquipment => 'Fitness equipment';
+
+  @override
+  String get activitySubTypeTreadmill => 'Treadmill';
+
+  @override
+  String get activitySubTypeIndoorWalking => 'Indoor walking';
+
+  @override
+  String get activitySubTypeSpeedWalking => 'Speed walking';
+
+  @override
+  String get activitySubTypeSpin => 'Spinning';
+
+  @override
+  String get activitySubTypeIndoorCycling => 'Indoor cycling';
+
+  @override
+  String get activityTypeRunning => 'Running';
+
+  @override
+  String get activityTypeWalking => 'Walking';
+
+  @override
+  String get activitySubTypeGeneric => 'Traditional';
+
+  @override
+  String get activitySubTypeRunStreet => 'Street running';
+
+  @override
+  String get activitySubTypeRunTrail => 'Trail running';
+
+  @override
+  String get activitySubTypeRunTrack => 'Track running';
+
+  @override
+  String get activitySubTypeWalkCasual => 'Casual walking';
+
+  @override
+  String get activitySubTypeCycleRoad => 'Road';
+
+  @override
+  String get activitySubTypeCycleMountain => 'Mountain bike';
 }

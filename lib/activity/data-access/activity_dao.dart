@@ -17,6 +17,45 @@ class ActivityDAO {
 
   final Database _database;
 
+  Future<ActivityData?> findUnfinished() async {
+    final rows = await _database.query(
+      'activities',
+      where: 'finished_at_ms IS NULL AND status IN (?, ?)',
+      whereArgs: ['recording', 'paused'],
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+    return rows.isEmpty ? null : ActivityData.fromMap(rows.single);
+  }
+
+  Future<List<ActivityTrackPoint>> getTrackPoints(int activityId) async {
+    final rows = await _database.query(
+      'activity_track_points',
+      where: 'activity_id = ?',
+      whereArgs: [activityId],
+      orderBy: 'seq',
+    );
+    return rows.map(ActivityTrackPoint.fromMap).toList();
+  }
+
+  Future<void> updateLifecycle(
+    int activityId, {
+    required ActivityRecordStatus status,
+    required int startedAtMs,
+    int? finishedAtMs,
+  }) async {
+    await _database.update(
+      'activities',
+      {
+        'status': status.name,
+        'started_at_ms': startedAtMs,
+        'finished_at_ms': finishedAtMs,
+      },
+      where: 'id = ?',
+      whereArgs: [activityId],
+    );
+  }
+
   Future<ActivityData> createData(ActivityData data) async {
     final values = data.toMap()..remove('id');
     final id = await _database.insert('activities', values);
@@ -66,7 +105,7 @@ class ActivityDAO {
         whereArgs: [activityId],
       );
 
-      batch.commit(noResult: true);
+      await batch.commit(noResult: true);
     });
   }
 }
