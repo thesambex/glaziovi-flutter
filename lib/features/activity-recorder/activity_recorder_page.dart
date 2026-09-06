@@ -19,7 +19,9 @@ const _initialZoom = 13.0;
 const _userZoom = 18.0;
 
 class ActivityRecorderPage extends ConsumerStatefulWidget {
-  const ActivityRecorderPage({super.key});
+  const ActivityRecorderPage({super.key, this.tileProvider});
+
+  final TileProvider? tileProvider;
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() =>
@@ -95,6 +97,7 @@ class _ActivityRecorderState extends ConsumerState<ActivityRecorderPage> {
                 index: state.view.index,
                 children: [
                   _MapView(
+                    tileProvider: widget.tileProvider,
                     mapController: _mapController,
                     state: state,
                     onMapReady: _onMapReady,
@@ -206,12 +209,14 @@ class _ActivityRecorderState extends ConsumerState<ActivityRecorderPage> {
 
 class _MapView extends StatelessWidget {
   const _MapView({
+    this.tileProvider,
     required this.mapController,
     required this.state,
     required this.onMapReady,
   });
 
   final MapController mapController;
+  final TileProvider? tileProvider;
   final ActivityState state;
   final VoidCallback onMapReady;
 
@@ -228,6 +233,7 @@ class _MapView extends StatelessWidget {
       ),
       children: [
         TileLayer(
+          tileProvider: tileProvider,
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'glaziovi.app',
         ),

@@ -4,6 +4,7 @@ import 'package:glaziovi/activity/activity_event.dart';
 import 'package:glaziovi/activity/activity_track_point.dart';
 import 'package:glaziovi/activity/data-access/activity_dao.dart';
 
+/// Stores a buffer o location points and events to avoid excessive IO database calls
 class ActivityBuffer {
   ActivityBuffer({
     required this._activityId,
@@ -16,6 +17,7 @@ class ActivityBuffer {
   final int _activityId;
   final ActivityDAO _activityDao;
 
+  /// Max age of buffer before flushing
   final Duration maxBufferAge;
 
   /// Track points size of record
@@ -88,6 +90,9 @@ class ActivityBuffer {
 
   /// Record activity data
   Future<void> flush() async {
+    // If has a pending flush, wait for it to complete then do flush().
+    // If no pending flush, do flush().
+    // If error occurred during flush, ignore and flush().
     final previous = _inFlight;
 
     final next = previous == null

@@ -51,6 +51,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
 
   Future<void> _restoreActivity() => _restoration ??= _loadActivity();
 
+  /// Load unfinished activity
   Future<void> _loadActivity() async {
     try {
       final activityDao = await ref.read(activityDAOProvider.future);
@@ -126,6 +127,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     );
   }
 
+  /// Create a new activity
   Future<void> createActivity(
     ActivitySportType sportType,
     ActivitySubSportType subSport,
@@ -159,6 +161,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     );
   }
 
+  /// Delete current activity
   Future<void> deleteActivity(VoidCallback onDeleted) async {
     if (_isDeleting || _isStarting) return;
     _isDeleting = true;
@@ -201,6 +204,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     }
   }
 
+  /// Initialize activity get GPS position, and restore pending activity
   Future<void> initialize() async {
     if (_isInitialized) return;
 
@@ -234,12 +238,16 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     }
   }
 
+  /// Starts a new activity when is ready
   Future<void> start() async {
     if (_isStarting || _isDeleting) return;
     _isStarting = true;
+
     try {
       await _restoreActivity();
+
       if (state.status != ActivityStatus.idle || !state.isReady) return;
+
       await _ensureLocationPermission();
 
       if (Platform.isAndroid) {
@@ -254,6 +262,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
         status: ActivityRecordStatus.recording,
         startedAtMs: startedAt.millisecondsSinceEpoch,
       );
+
       _recordingStartedAt = startedAt;
 
       state = state.copyWith(
@@ -278,6 +287,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     }
   }
 
+  /// Pause current activity
   Future<void> pause() async {
     if (_isDeleting) return;
     if (!state.isRecording) return;
@@ -294,6 +304,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     _positionSubscription = null;
 
     _updateBufferTotals();
+
     await _activityBuffer?.addEvent(
       ActivityEventType.timerStop,
       DateTime.now().millisecondsSinceEpoch,
@@ -303,11 +314,13 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       status: ActivityStatus.paused,
       clearPreviousPosition: true,
     );
+
     await _saveLifecycle(ActivityRecordStatus.paused);
   }
 
   // TODO: Create auto lap
 
+  /// Resume current paused activity
   Future<void> resume() async {
     if (_isDeleting) return;
     if (state.status != ActivityStatus.paused) return;
@@ -318,6 +331,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       _recordingStartedAt = DateTime.now();
 
       _updateBufferTotals();
+
       await _activityBuffer?.addEvent(
         ActivityEventType.timerStart,
         DateTime.now().millisecondsSinceEpoch,
@@ -330,6 +344,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       );
 
       _startElapsedTimer();
+
       await _saveLifecycle(ActivityRecordStatus.recording);
       await _startPositionStream();
     } catch (error, stackTrace) {
@@ -337,6 +352,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     }
   }
 
+  /// Finish actitivy and clear state
   Future<void> finish(VoidCallback onFinished) async {
     if (_isDeleting) return;
     if (state.status != ActivityStatus.paused || state.startedAt == null) {
@@ -364,10 +380,12 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     onFinished();
   }
 
+  /// Clear activity state
   Future<void> reset() async {
     if (_isDeleting) return;
     if (state.hasStarted) await _saveLifecycle(ActivityRecordStatus.aborted);
     _elapsedTimer?.cancel();
+
     await _positionSubscription?.cancel();
 
     _elapsedTimer = null;
@@ -376,6 +394,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     _elapsedBeforeCurrentRecording = Duration.zero;
 
     await _activityBuffer?.dispose();
+
     _activityBuffer = null;
     _activityData = null;
     state = ActivityState(currentPosition: state.currentPosition);
@@ -387,6 +406,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     state = state.copyWith(clearError: true);
   }
 
+  /// TODO: Create metrics view
   void toggleView() {
     state = state.copyWith(
       view: state.view == ActivityView.map
