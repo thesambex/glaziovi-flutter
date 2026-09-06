@@ -15,6 +15,7 @@ class _HomeViewState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final activitiesAsync = ref.watch(homePageViewModelProvider);
+    final viewModel = ref.read(homePageViewModelProvider.notifier);
 
     return Scaffold(
       body: activitiesAsync.when(
@@ -23,7 +24,10 @@ class _HomeViewState extends ConsumerState<HomePage> {
           return ListView.builder(
             itemCount: activities.length,
             itemBuilder: (context, index) {
+              final activityData = activities[index];
+
               return InkWell(
+                onTap: () => viewModel.writeToFit(activityData.id),
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.all(10),
