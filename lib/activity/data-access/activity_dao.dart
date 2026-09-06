@@ -28,6 +28,18 @@ class ActivityDAO {
     return rows.isEmpty ? null : ActivityData.fromMap(rows.single);
   }
 
+  Future<List<ActivityData>> listFinished() async {
+    final rows = await _database.query(
+      'activities',
+      where: 'finished_at_ms IS NOT NULL AND status IN (?)',
+      whereArgs: ['finished'],
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+
+    return rows.map((row) => ActivityData.fromMap(row)).toList();
+  }
+
   Future<List<ActivityTrackPoint>> getTrackPoints(int activityId) async {
     final rows = await _database.query(
       'activity_track_points',
@@ -118,11 +130,7 @@ class ActivityDAO {
           whereArgs: [activityId],
         );
       }
-      await txn.delete(
-        'activities',
-        where: 'id = ?',
-        whereArgs: [activityId],
-      );
+      await txn.delete('activities', where: 'id = ?', whereArgs: [activityId]);
     });
   }
 }

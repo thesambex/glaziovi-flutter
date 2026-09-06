@@ -553,6 +553,7 @@ class _ActivityControlsState extends ConsumerState<_ActivityControls> {
                 ),
 
                 if (status == ActivityStatus.paused && startedAt != null)
+                  // TODO: Create activity description screen
                   FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.white,
