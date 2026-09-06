@@ -147,9 +147,11 @@ class _ActivityRecorderState extends ConsumerState<ActivityRecorderPage> {
 
     if (confirmed != true || !mounted) return;
 
-    await ref.read(activityRecorderViewModelProvider.notifier).deleteActivity(() {
-      if (mounted) context.go('/');
-    });
+    await ref.read(activityRecorderViewModelProvider.notifier).deleteActivity(
+      () {
+        if (mounted) context.go('/');
+      },
+    );
   }
 
   void _onMapReady() {
@@ -552,7 +554,11 @@ class _ActivityControlsState extends ConsumerState<_ActivityControls> {
                     ),
                     onPressed: isDisabled
                         ? null
-                        : () => _execute(viewModel.finish),
+                        : () => _execute(
+                            () => viewModel.finish(() {
+                              if (context.mounted) Navigator.pop(context);
+                            }),
+                          ),
                     child: Text(l10n.finishHint),
                   ),
               ],

@@ -337,7 +337,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     }
   }
 
-  Future<void> finish() async {
+  Future<void> finish(VoidCallback onFinished) async {
     if (_isDeleting) return;
     if (state.status != ActivityStatus.paused || state.startedAt == null) {
       return;
@@ -357,7 +357,11 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       status: ActivityStatus.finished,
       finishedAt: DateTime.now(),
     );
+
     await _saveLifecycle(ActivityRecordStatus.finished);
+    await reset();
+
+    onFinished();
   }
 
   Future<void> reset() async {

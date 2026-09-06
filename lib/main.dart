@@ -65,6 +65,8 @@ class _AppState extends ConsumerState<App> {
     await ref.read(databaseProvider.future);
   }
 
+  // TODO: Create application theme
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
