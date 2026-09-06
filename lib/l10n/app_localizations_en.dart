@@ -77,6 +77,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activitySelectSport => 'Select sport';
 
   @override
+  String get activityRecorderDeleteHint =>
+      'Are you sure you want to abandon the current activity?';
+
+  @override
+  String get activityRecorderAbandonTitle => 'Abandon activity?';
+
+  @override
+  String get activityRecorderAbandonAction => 'Abandon';
+
+  @override
+  String get cancelHint => 'Cancel';
+
+  @override
   String get activityTypeCycling => 'Cycling';
 
   @override

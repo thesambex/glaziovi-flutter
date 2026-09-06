@@ -35,6 +35,10 @@
     }
   },
   "activitySelectSport": "Select sport",
+  "activityRecorderDeleteHint": "Are you sure you want to abandon the current activity?",
+  "activityRecorderAbandonTitle": "Abandon activity?",
+  "activityRecorderAbandonAction": "Abandon",
+  "cancelHint": "Cancel",
   "activityTypeCycling": "Cycling",
   "activityTypeGeneric": "Other sports",
   "activityTypeFitnessEquipment": "Fitness equipment",

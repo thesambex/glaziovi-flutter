@@ -108,4 +108,21 @@ class ActivityDAO {
       await batch.commit(noResult: true);
     });
   }
+
+  Future<void> deleteActivity(int activityId) async {
+    await _database.transaction((txn) async {
+      for (final table in ['activity_track_points', 'activity_events']) {
+        await txn.delete(
+          table,
+          where: 'activity_id = ?',
+          whereArgs: [activityId],
+        );
+      }
+      await txn.delete(
+        'activities',
+        where: 'id = ?',
+        whereArgs: [activityId],
+      );
+    });
+  }
 }

@@ -8,6 +8,7 @@ import 'package:glaziovi/features/activity-recorder/activity_error_l10n.dart';
 import 'package:glaziovi/features/activity-recorder/activity_recorder_state.dart';
 import 'package:glaziovi/features/activity-recorder/activity_recorder_view_model.dart';
 import 'package:glaziovi/l10n/app_localizations.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:intl/intl.dart';
 import 'package:glaziovi/activity/activity_sport.dart';
@@ -15,7 +16,7 @@ import 'package:glaziovi/features/activity-recorder/activity_sport_picker.dart';
 
 const _initialCenter = LatLng(-13.007316938533874, -41.376938721927566);
 const _initialZoom = 13.0;
-const _userZoom = 15.0;
+const _userZoom = 18.0;
 
 class ActivityRecorderPage extends ConsumerStatefulWidget {
   const ActivityRecorderPage({super.key});
@@ -43,13 +44,14 @@ class _ActivityRecorderState extends ConsumerState<ActivityRecorderPage> {
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.read(activityRecorderViewModelProvider);
+
     ref.watch(
       activityRecorderViewModelProvider.select(
         (state) =>
             (state.view, state.status, state.currentPosition, state.route),
       ),
     );
-    final state = ref.read(activityRecorderViewModelProvider);
 
     ref.listen(
       activityRecorderViewModelProvider.select(
@@ -74,7 +76,17 @@ class _ActivityRecorderState extends ConsumerState<ActivityRecorderPage> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.activityHint), centerTitle: true),
+      appBar: AppBar(
+        title: Text(l10n.activityHint),
+        centerTitle: true,
+        actions: [
+          if (state.hasStarted)
+            IconButton(
+              onPressed: _confirmAbandonActivity,
+              icon: Icon(Icons.delete_outline),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -108,6 +120,36 @@ class _ActivityRecorderState extends ConsumerState<ActivityRecorderPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmAbandonActivity() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.activityRecorderAbandonTitle),
+        content: Text(l10n.activityRecorderDeleteHint),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancelHint),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            child: Text(l10n.activityRecorderAbandonAction),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    await ref.read(activityRecorderViewModelProvider.notifier).deleteActivity(() {
+      if (mounted) context.go('/');
+    });
   }
 
   void _onMapReady() {

@@ -214,6 +214,30 @@ abstract class AppLocalizations {
   /// **'Select sport'**
   String get activitySelectSport;
 
+  /// No description provided for @activityRecorderDeleteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to abandon the current activity?'**
+  String get activityRecorderDeleteHint;
+
+  /// No description provided for @activityRecorderAbandonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Abandon activity?'**
+  String get activityRecorderAbandonTitle;
+
+  /// No description provided for @activityRecorderAbandonAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Abandon'**
+  String get activityRecorderAbandonAction;
+
+  /// No description provided for @cancelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancelHint;
+
   /// No description provided for @activityTypeCycling.
   ///
   /// In en, this message translates to:

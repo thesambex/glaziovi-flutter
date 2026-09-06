@@ -30,6 +30,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
 
   bool _isInitialized = false;
   bool _isStarting = false;
+  bool _isDeleting = false;
 
   bool get isReady => state.isReady;
 
@@ -52,22 +53,28 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
 
   Future<void> _loadActivity() async {
     try {
-      final dao = await ref.read(activityDAOProvider.future);
-      final data = await dao.findUnfinished();
+      final activityDao = await ref.read(activityDAOProvider.future);
+      final data = await activityDao.findUnfinished();
+
       if (data == null) return;
-      final points = await dao.getTrackPoints(data.id);
-      await dao.updateLifecycle(
+
+      final points = await activityDao.getTrackPoints(data.id);
+
+      await activityDao.updateLifecycle(
         data.id,
         status: ActivityRecordStatus.paused,
         startedAtMs: data.startedAtMs,
       );
+
       _activityData = data.copyWith(status: ActivityRecordStatus.paused);
       _activityBuffer = ActivityBuffer(
         activityId: data.id,
-        activityDao: dao,
+        activityDao: activityDao,
         startSeq: points.isEmpty ? 0 : points.last.seq + 1,
       );
+
       _elapsedBeforeCurrentRecording = Duration(milliseconds: data.timerMs);
+
       state = state.copyWith(
         status: data.startedAtMs < 0
             ? ActivityStatus.idle
@@ -83,6 +90,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
             .toList(),
         clearPreviousPosition: true,
       );
+
       _updateBufferTotals();
     } catch (_) {
       _restoration = null;
@@ -104,10 +112,13 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   Future<void> _saveLifecycle(ActivityRecordStatus status) async {
     final data = _activityData;
     if (data == null) return;
+
     _updateBufferTotals();
+
     await _activityBuffer?.flush();
-    final dao = await ref.read(activityDAOProvider.future);
-    await dao.updateLifecycle(
+
+    final activityDao = await ref.read(activityDAOProvider.future);
+    await activityDao.updateLifecycle(
       data.id,
       status: status,
       startedAtMs: state.startedAt?.millisecondsSinceEpoch ?? -1,
@@ -148,6 +159,48 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     );
   }
 
+  Future<void> deleteActivity(VoidCallback onDeleted) async {
+    if (_isDeleting || _isStarting) return;
+    _isDeleting = true;
+
+    try {
+      final data = _activityData;
+      if (data == null || data.id <= 0) return;
+
+      _updateElapsed();
+
+      _elapsedBeforeCurrentRecording = state.elapsed;
+      _recordingStartedAt = null;
+      _elapsedTimer?.cancel();
+      _elapsedTimer = null;
+
+      state = state.copyWith(
+        status: ActivityStatus.paused,
+        clearPreviousPosition: true,
+        clearError: true,
+      );
+
+      await _positionSubscription?.cancel();
+      _positionSubscription = null;
+
+      await _activityBuffer?.dispose();
+
+      final activityDao = await ref.read(activityDAOProvider.future);
+      await activityDao.deleteActivity(data.id);
+
+      _activityBuffer = null;
+      _activityData = null;
+      _elapsedBeforeCurrentRecording = Duration.zero;
+      state = ActivityState(currentPosition: state.currentPosition);
+
+      onDeleted();
+    } catch (error, stackTrace) {
+      _handleError(error, stackTrace);
+    } finally {
+      _isDeleting = false;
+    }
+  }
+
   Future<void> initialize() async {
     if (_isInitialized) return;
 
@@ -182,7 +235,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   }
 
   Future<void> start() async {
-    if (_isStarting) return;
+    if (_isStarting || _isDeleting) return;
     _isStarting = true;
     try {
       await _restoreActivity();
@@ -194,8 +247,9 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       }
 
       final startedAt = DateTime.now();
-      final dao = await ref.read(activityDAOProvider.future);
-      await dao.updateLifecycle(
+      final activityDao = await ref.read(activityDAOProvider.future);
+
+      await activityDao.updateLifecycle(
         _activityData!.id,
         status: ActivityRecordStatus.recording,
         startedAtMs: startedAt.millisecondsSinceEpoch,
@@ -210,10 +264,12 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       );
 
       _startElapsedTimer();
+
       await _activityBuffer?.addEvent(
         ActivityEventType.timerStart,
         startedAt.millisecondsSinceEpoch,
       );
+
       await _startPositionStream();
     } catch (error, stackTrace) {
       _handleError(error, stackTrace);
@@ -223,6 +279,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   }
 
   Future<void> pause() async {
+    if (_isDeleting) return;
     if (!state.isRecording) return;
 
     _updateElapsed();
@@ -252,6 +309,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   // TODO: Create auto lap
 
   Future<void> resume() async {
+    if (_isDeleting) return;
     if (state.status != ActivityStatus.paused) return;
 
     try {
@@ -280,6 +338,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   }
 
   Future<void> finish() async {
+    if (_isDeleting) return;
     if (state.status != ActivityStatus.paused || state.startedAt == null) {
       return;
     }
@@ -302,6 +361,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   }
 
   Future<void> reset() async {
+    if (_isDeleting) return;
     if (state.hasStarted) await _saveLifecycle(ActivityRecordStatus.aborted);
     _elapsedTimer?.cancel();
     await _positionSubscription?.cancel();
