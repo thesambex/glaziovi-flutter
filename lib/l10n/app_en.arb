@@ -1,0 +1,59 @@
+{
+  "startHint": "Start",
+  "okHint": "OK",
+  "errorTitle": "Something went wrong",
+  "pauseHint": "Pause",
+  "resumeHint": "Resume",
+  "finishHint": "Finish",
+  "resetHint": "New activity",
+  "timeHint": "Time",
+  "kilometersHint": "Kilometers",
+  "activityHint": "Activity",
+  "locationServiceDisabledError": "Enable device location",
+  "locationPermissionDeniedError": "Location permission denied",
+  "locationPermissionDeniedForeverError": "Location permission permanently denied, enable it in the device settings",
+  "backgroundLocationPermissionDeniedError": "Enable background location permission to record activity in background",
+  "unknownError": "Something went wrong, please try again",
+  "recordingNotificationTitle": "Activity in progress",
+  "recordingNotificationText": "Glaziovi is recording your location.",
+  "distanceWithUnitHint": "Distance ({unit})",
+  "@distanceWithUnitHint": {
+    "description": "Distance label with unit",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "avgSpeedWithUnitHint": "AVG Speed ({unit})",
+  "@avgSpeedWithUnitHint": {
+    "description": "Average speed with unit",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "activitySelectSport": "Select sport",
+  "activityRecorderDeleteHint": "Are you sure you want to abandon the current activity?",
+  "activityRecorderAbandonTitle": "Abandon activity?",
+  "activityRecorderAbandonAction": "Abandon",
+  "cancelHint": "Cancel",
+  "activityTypeCycling": "Cycling",
+  "activityTypeGeneric": "Other sports",
+  "activityTypeFitnessEquipment": "Fitness equipment",
+  "activitySubTypeTreadmill": "Treadmill",
+  "activitySubTypeIndoorWalking": "Indoor walking",
+  "activitySubTypeSpeedWalking": "Speed walking",
+  "activitySubTypeSpin": "Spinning",
+  "activitySubTypeIndoorCycling": "Indoor cycling",
+  "activityTypeRunning": "Running",
+  "activityTypeWalking": "Walking",
+  "activitySubTypeGeneric": "Traditional",
+  "activitySubTypeRunStreet": "Street running",
+  "activitySubTypeRunTrail": "Trail running",
+  "activitySubTypeRunTrack": "Track running",
+  "activitySubTypeWalkCasual": "Casual walking",
+  "activitySubTypeCycleRoad": "Road",
+  "activitySubTypeCycleMountain": "Mountain bike"
+}
