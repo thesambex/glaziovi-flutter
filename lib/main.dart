@@ -9,6 +9,7 @@ import 'package:glaziovi/features/activity-recorder/activity_recorder_page.dart'
 import 'package:glaziovi/features/home/home_page.dart';
 import 'package:glaziovi/l10n/app_localizations.dart';
 import 'package:glaziovi/l10n/l10n_providers.dart';
+import 'package:glaziovi/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
@@ -72,6 +73,7 @@ class _AppState extends ConsumerState<App> {
     return MaterialApp.router(
       title: 'Glaziovi',
       routerConfig: _router,
+      theme: theme,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         ...GlobalMaterialLocalizations.delegates,
