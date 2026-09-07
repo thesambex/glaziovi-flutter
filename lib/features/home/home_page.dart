@@ -5,6 +5,7 @@ import 'package:glaziovi/features/home/home_page_view_model.dart';
 import 'package:glaziovi/l10n/app_localizations.dart';
 import 'package:glaziovi/navigation/app_route_observer.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -119,7 +120,15 @@ class _ActivityCard extends StatelessWidget {
               icon: const Icon(Icons.more_vert_outlined),
               onSelected: (value) {
                 if (value == 1) {
-                  _viewModel.writeToFit(_summary.activityDataId);
+                  _viewModel.exportToFit(
+                    activityId: _summary.activityDataId,
+                    onExported: (path) async {
+                      final xFile = XFile(path, mimeType: 'application/fits');
+                      final shareParams = ShareParams(files: [xFile]);
+
+                      await SharePlus.instance.share(shareParams);
+                    },
+                  );
                 }
               },
               itemBuilder: (context) => <PopupMenuEntry<int>>[
