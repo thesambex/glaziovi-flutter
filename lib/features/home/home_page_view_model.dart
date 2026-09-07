@@ -67,6 +67,7 @@ class HomePageViewModel extends _$HomePageViewModel {
     );
     fitBuilder.writeRecords(fitTrackPoints);
     fitBuilder.writeSession(session: activitySession);
+    fitBuilder.writeActivity(session: activitySession);
 
     final fitData = fitBuilder.build();
 

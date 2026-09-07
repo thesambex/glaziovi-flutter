@@ -10,6 +10,78 @@ import 'package:glaziovi/fit/fit_utils.dart';
 class FitBuilder {
   final _recordsBuffer = BytesBuilder();
 
+  void writeActivity({required FitSession session}) {
+    final def = ByteData(6 + 7 * 3);
+
+    // Definition Message: local message type 4 (0x44)
+    def.setUint8(0, 0x44);
+    def.setUint8(1, 0x00);
+    def.setUint8(2, 0x00);
+    def.setUint16(3, 34, Endian.little);
+    def.setUint8(5, 7);
+
+    /* Field definitions */
+
+    // timestamp
+    def.setUint8(6, 253);
+    def.setUint8(7, 4);
+    def.setUint8(8, 0x86);
+
+    // total_timer_time
+    def.setUint8(9, 0);
+    def.setUint8(10, 4);
+    def.setUint8(11, 0x86);
+
+    // num_sessions
+    def.setUint8(12, 1);
+    def.setUint8(13, 2);
+    def.setUint8(14, 0x84);
+
+    // type
+    def.setUint8(15, 2);
+    def.setUint8(16, 1);
+    def.setUint8(17, 0x00);
+
+    // event
+    def.setUint8(18, 3);
+    def.setUint8(19, 1);
+    def.setUint8(20, 0x00);
+
+    // event_type
+    def.setUint8(21, 4);
+    def.setUint8(22, 1);
+    def.setUint8(23, 0x00);
+
+    // local_timestamp
+    def.setUint8(24, 5);
+    def.setUint8(25, 4);
+    def.setUint8(26, 0x86);
+
+    _recordsBuffer.add(def.buffer.asUint8List());
+
+    final data = ByteData(18);
+
+    // Data Message: local message type 4 (0x04)
+    data.setUint8(0, 0x04);
+
+    final timestamp = FitUtils.toGarminTimestamp(session.timestamp);
+    data.setUint32(1, timestamp, Endian.little);
+
+    // FIT timer duration uses milliseconds (scale 1000).
+    data.setUint32(5, session.totalTimerTime, Endian.little);
+    data.setUint16(9, 1, Endian.little); // One session
+    data.setUint8(11, 0); // Manual activity
+    data.setUint8(12, 26); // Activity event
+    data.setUint8(13, 1); // Stop event
+    data.setUint32(
+      14,
+      timestamp + session.timestamp.timeZoneOffset.inSeconds,
+      Endian.little,
+    );
+
+    _recordsBuffer.add(data.buffer.asUint8List());
+  }
+
   void writeSession({required FitSession session}) {
     final def = ByteData(6 + 9 * 3);
 
@@ -292,6 +364,7 @@ class FitBuilder {
       0x8801,
       0x4400,
     ];
+
     int crc = 0;
     for (var byte in bytes) {
       var tmp = crcTable[crc & 0xF];
