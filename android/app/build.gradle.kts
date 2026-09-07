@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "glaziovi.app"
+    namespace = "com.glaziovi.fit.tracker"
     compileSdk = 37
     ndkVersion = "28.2.13676358"
 
@@ -14,7 +14,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "glaziovi.app"
+        applicationId = "com.glaziovi.fit.tracker"
         minSdk = 24
         targetSdk = 37
         versionCode = flutter.versionCode
