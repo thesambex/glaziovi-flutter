@@ -25,6 +25,8 @@ class FitHeader {
 
     buffer.setUint8(0, headerSize);
     buffer.setUint8(1, protocolVersion);
+
+    // Profile Version LSB byte[2]  - MSB byte[3]
     buffer.setUint16(2, profileVersion, Endian.little);
     buffer.setUint32(4, dataSize, Endian.little);
 
@@ -33,6 +35,7 @@ class FitHeader {
       buffer.setUint8(8 + i, dtAscii[i]);
     }
 
+    // CRC LSB byte[12]  - MSB byte[13]
     buffer.setUint16(12, crc, Endian.little);
 
     return bytes;

@@ -1,33 +1,52 @@
 import 'dart:typed_data';
 
+import 'package:glaziovi/fit/fit_file_type.dart';
 import 'package:glaziovi/fit/fit_header.dart';
 import 'package:glaziovi/fit/fit_record.dart';
 import 'package:glaziovi/fit/fit_utils.dart';
 
-/// Class to create FIT files (WIP)
+/// Builder to create FIT files. Check Profile.xlsx in FIT SDK and garmin docs (WIP)
 class FitBuilder {
   final _recordsBuffer = BytesBuilder();
 
-  void writeField({required DateTime createdAt, required String deviceUuid}) {
+  void writeField({
+    required FitFileType fileType,
+    required DateTime createdAt,
+    required String deviceUuid,
+  }) {
+    // TODO: Improve serial number generation?
     final serialNumber = deviceUuid.hashCode.abs() & 0xFFFFFFFF;
 
     final def = ByteData(6 + 4 * 3);
+    /* Record Normal Header, check Record Format in docs */
+
+    // Normal Header: 1 byte bit field, Bit 7 (0000 0100 OR 0x40)
     def.setUint8(0, 0x40);
+
+    /* Record Content*/
     def.setUint8(1, 0x00);
     def.setUint8(2, 0x00);
     def.setUint16(3, 0, Endian.little);
     def.setUint8(5, 4);
 
+    /* Field definitions */
+
+    // file_id
     def.setUint8(6, 0);
     def.setUint8(7, 1);
     def.setUint8(8, 0x00);
+
+    // manufacturer
     def.setUint8(9, 1);
     def.setUint8(10, 2);
     def.setUint8(11, 0x84);
+
+    // time_created
     def.setUint8(12, 4);
     def.setUint8(13, 4);
     def.setUint8(14, 0x86);
-    // file_id.serial_number: field 3, four-byte uint32z.
+
+    // serial_number
     def.setUint8(15, 3);
     def.setUint8(16, 4);
     def.setUint8(17, 0x8C);
@@ -36,7 +55,7 @@ class FitBuilder {
 
     final data = ByteData(1 + 1 + 2 + 4 + 4);
     data.setUint8(0, 0x00);
-    data.setUint8(1, 4);
+    data.setUint8(1, fileType.value);
     data.setUint16(2, 255, Endian.little);
     data.setUint32(4, FitUtils.toGarminTimestamp(createdAt), Endian.little);
     data.setUint32(8, serialNumber & 0xFFFFFFFF, Endian.little);

@@ -44,8 +44,7 @@ class ActivityDAO {
       'activities',
       where: 'finished_at_ms IS NOT NULL AND status IN (?)',
       whereArgs: ['finished'],
-      orderBy: 'id DESC',
-      limit: 1,
+      orderBy: 'id DESC'
     );
 
     return rows.map((row) => ActivityData.fromMap(row)).toList();

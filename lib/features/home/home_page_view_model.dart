@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:glaziovi/activity/activity_data.dart';
 import 'package:glaziovi/activity/data-access/activity_dao.dart';
 import 'package:glaziovi/fit/fit_builder.dart';
+import 'package:glaziovi/fit/fit_file_type.dart';
 import 'package:glaziovi/fit/fit_record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -46,6 +47,7 @@ class HomePageViewModel extends _$HomePageViewModel {
 
     final fitBuilder = FitBuilder();
     fitBuilder.writeField(
+      fileType: FitFileType.activity,
       createdAt: DateTime.now(),
       deviceUuid: androidDeviceInfo.id,
     );
