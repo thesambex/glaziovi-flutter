@@ -130,6 +130,24 @@ abstract class AppLocalizations {
   /// **'Finish'**
   String get finishHint;
 
+  /// No description provided for @exportFitFileHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Export to FIT'**
+  String get exportFitFileHint;
+
+  /// No description provided for @activityNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity name'**
+  String get activityNameHint;
+
+  /// No description provided for @activityNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an activity name'**
+  String get activityNameRequired;
+
   /// No description provided for @resetHint.
   ///
   /// In en, this message translates to:

@@ -59,6 +59,7 @@ class ActivityState {
   final bool isLoadingLocation;
   final ActivityError? error;
   final ActivitySport? selectedSport;
+
   bool get isReady => selectedSport != null;
 
   bool get isRecording => status == ActivityStatus.recording;

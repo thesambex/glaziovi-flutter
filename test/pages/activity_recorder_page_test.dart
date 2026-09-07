@@ -60,7 +60,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [activityDAOProvider.overrideWith((ref) async => dao)],
+          overrides: [activityDaoProvider.overrideWith((ref) async => dao)],
           child: MaterialApp.router(
             routerConfig: router,
             locale: const Locale('en'),

@@ -9,7 +9,9 @@ import 'package:glaziovi/activity/activity_sport.dart';
 import 'package:glaziovi/activity/activity_event.dart';
 import 'package:glaziovi/activity/activity_sport_type.dart';
 import 'package:glaziovi/activity/activity_sub_sport_type.dart';
+import 'package:glaziovi/activity/activity_summary.dart';
 import 'package:glaziovi/activity/data-access/activity_dao.dart';
+import 'package:glaziovi/activity/data-access/activity_summary_dao.dart';
 import 'package:glaziovi/features/activity-recorder/activity_recorder_state.dart';
 import 'package:glaziovi/l10n/l10n_providers.dart';
 import 'package:latlong2/latlong.dart';
@@ -54,7 +56,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   /// Load unfinished activity
   Future<void> _loadActivity() async {
     try {
-      final activityDao = await ref.read(activityDAOProvider.future);
+      final activityDao = await ref.read(activityDaoProvider.future);
       final data = await activityDao.findUnfinished();
 
       if (data == null) return;
@@ -118,7 +120,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
 
     await _activityBuffer?.flush();
 
-    final activityDao = await ref.read(activityDAOProvider.future);
+    final activityDao = await ref.read(activityDaoProvider.future);
     await activityDao.updateLifecycle(
       data.id,
       status: status,
@@ -134,7 +136,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   ) async {
     await _restoreActivity();
     if (_activityData != null) return;
-    final activityDao = await ref.read(activityDAOProvider.future);
+    final activityDao = await ref.read(activityDaoProvider.future);
 
     final data = ActivityData(
       id: 0,
@@ -188,7 +190,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
 
       await _activityBuffer?.dispose();
 
-      final activityDao = await ref.read(activityDAOProvider.future);
+      final activityDao = await ref.read(activityDaoProvider.future);
       await activityDao.deleteActivity(data.id);
 
       _activityBuffer = null;
@@ -255,7 +257,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       }
 
       final startedAt = DateTime.now();
-      final activityDao = await ref.read(activityDAOProvider.future);
+      final activityDao = await ref.read(activityDaoProvider.future);
 
       await activityDao.updateLifecycle(
         _activityData!.id,
@@ -398,6 +400,32 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     _activityBuffer = null;
     _activityData = null;
     state = ActivityState(currentPosition: state.currentPosition);
+  }
+
+  Future<void> createSummary(String name, VoidCallback onCreated) async {
+    if (_isDeleting || state.status != ActivityStatus.paused) return;
+    if (_activityData == null || _activityData!.id <= 0) return;
+
+    final trimmedName = name.trim();
+
+    try {
+      final activitySummaryDao = await ref.read(
+        activitySummaryDaoProvider.future,
+      );
+      
+      final summary = ActivitySummary(
+        id: 0,
+        name: trimmedName.isEmpty ? 'Glaziovi activity' : trimmedName,
+        activityDataId: _activityData!.id,
+        isSynced: false,
+      );
+
+      await activitySummaryDao.createSummary(summary);
+
+      await finish(onCreated);
+    } catch (error, stackTrace) {
+      _handleError(error, stackTrace);
+    }
   }
 
   void clearError() {

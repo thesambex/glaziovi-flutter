@@ -13,7 +13,7 @@ part of 'home_page_view_model.dart';
 final homePageViewModelProvider = HomePageViewModelProvider._();
 
 final class HomePageViewModelProvider
-    extends $AsyncNotifierProvider<HomePageViewModel, List<ActivityData>> {
+    extends $AsyncNotifierProvider<HomePageViewModel, List<ActivitySummary>> {
   HomePageViewModelProvider._()
     : super(
         from: null,
@@ -33,20 +33,25 @@ final class HomePageViewModelProvider
   HomePageViewModel create() => HomePageViewModel();
 }
 
-String _$homePageViewModelHash() => r'155611c6c6745309296e81c304a14e65924746bb';
+String _$homePageViewModelHash() => r'0ef63b26b94b9d8e146bfb773d5a497ef1af2483';
 
-abstract class _$HomePageViewModel extends $AsyncNotifier<List<ActivityData>> {
-  FutureOr<List<ActivityData>> build();
+abstract class _$HomePageViewModel
+    extends $AsyncNotifier<List<ActivitySummary>> {
+  FutureOr<List<ActivitySummary>> build();
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
     final ref =
-        this.ref as $Ref<AsyncValue<List<ActivityData>>, List<ActivityData>>;
+        this.ref
+            as $Ref<AsyncValue<List<ActivitySummary>>, List<ActivitySummary>>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<List<ActivityData>>, List<ActivityData>>,
-              AsyncValue<List<ActivityData>>,
+              AnyNotifier<
+                AsyncValue<List<ActivitySummary>>,
+                List<ActivitySummary>
+              >,
+              AsyncValue<List<ActivitySummary>>,
               Object?,
               Object?
             >;

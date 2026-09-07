@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:glaziovi/features/activity-recorder/activity_error_l10n.dart';
 import 'package:glaziovi/features/activity-recorder/activity_recorder_state.dart';
 import 'package:glaziovi/features/activity-recorder/activity_recorder_view_model.dart';
+import 'package:glaziovi/features/home/home_page_view_model.dart';
 import 'package:glaziovi/l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -418,6 +419,23 @@ class _ActivityControls extends ConsumerStatefulWidget {
 class _ActivityControlsState extends ConsumerState<_ActivityControls> {
   bool _isExecuting = false;
 
+  Future<void> _finishActivity() async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => const _ActivityNameDialog(),
+    );
+    if (name == null || !mounted) return;
+
+    await ref.read(activityRecorderViewModelProvider.notifier).createSummary(
+      name,
+      () {
+        if (!mounted) return;
+        ref.invalidate(homePageViewModelProvider);
+        context.go('/');
+      },
+    );
+  }
+
   Future<void> _execute(Future<void> Function() action) async {
     if (_isExecuting) return;
     setState(() => _isExecuting = true);
@@ -553,7 +571,6 @@ class _ActivityControlsState extends ConsumerState<_ActivityControls> {
                 ),
 
                 if (status == ActivityStatus.paused && startedAt != null)
-                  // TODO: Create activity description screen
                   FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -561,17 +578,60 @@ class _ActivityControlsState extends ConsumerState<_ActivityControls> {
                     ),
                     onPressed: isDisabled
                         ? null
-                        : () => _execute(
-                            () => viewModel.finish(() {
-                              if (context.mounted) Navigator.pop(context);
-                            }),
-                          ),
+                        : () => _execute(_finishActivity),
                     child: Text(l10n.finishHint),
                   ),
               ],
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _ActivityNameDialog extends StatefulWidget {
+  const _ActivityNameDialog();
+
+  @override
+  State<_ActivityNameDialog> createState() => _ActivityNameDialogState();
+}
+
+class _ActivityNameDialogState extends State<_ActivityNameDialog> {
+  final _nameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    Navigator.of(context).pop(_nameController.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.finishHint),
+      content: TextField(
+        controller: _nameController,
+        autofocus: true,
+        textCapitalization: TextCapitalization.sentences,
+        textInputAction: TextInputAction.done,
+        decoration: InputDecoration(
+          labelText: l10n.activityNameHint,
+          border: OutlineInputBorder(),
+        ),
+        onSubmitted: (_) => _confirm(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancelHint),
+        ),
+        FilledButton(onPressed: _confirm, child: Text(l10n.okHint)),
       ],
     );
   }

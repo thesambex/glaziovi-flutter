@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:glaziovi/activity/activity_data.dart';
+import 'package:glaziovi/activity/activity_summary.dart';
 import 'package:glaziovi/activity/data-access/activity_dao.dart';
+import 'package:glaziovi/activity/data-access/activity_summary_dao.dart';
 import 'package:glaziovi/fit/fit_builder.dart';
 import 'package:glaziovi/fit/fit_file_type.dart';
 import 'package:glaziovi/fit/fit_record.dart';
@@ -16,15 +18,17 @@ part 'home_page_view_model.g.dart';
 @riverpod
 class HomePageViewModel extends _$HomePageViewModel {
   @override
-  Future<List<ActivityData>> build() async {
-    final activityDao = await ref.read(activityDAOProvider.future);
+  Future<List<ActivitySummary>> build() async {
+    final activitySummaryDao = await ref.read(
+      activitySummaryDaoProvider.future,
+    );
 
-    return await activityDao.listFinished();
+    return await activitySummaryDao.listSummaries();
   }
 
   // Simple helle world to test the exporter
   Future<void> writeToFit(int activityId) async {
-    final activityDao = await ref.read(activityDAOProvider.future);
+    final activityDao = await ref.read(activityDaoProvider.future);
 
     final activity = await activityDao.findById(activityId);
     if (activity == null) return;

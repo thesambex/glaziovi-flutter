@@ -7,6 +7,9 @@ class AppDatabase {
     return openDatabase(
       'glaziovi.db',
       version: 1,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: (db, version) async {
         await db.execute('''CREATE TABLE IF NOT EXISTS activities (
           id INTEGER PRIMARY KEY,
@@ -46,7 +49,25 @@ class AppDatabase {
           FOREIGN KEY (activity_id) REFERENCES activities (id) ON DELETE CASCADE
         )
         ''');
+
+        await _createActivitySummaries(db);
       },
     );
+  }
+
+  static Future<void> _createActivitySummaries(Database db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS activity_summaries (
+          id INTEGER NOT NULL,
+          activity_name TEXT NOT NULL,
+          activity_data_id INTEGER NOT NULL,
+          is_synced INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (id),
+          FOREIGN KEY (activity_data_id) REFERENCES activities (id) ON DELETE CASCADE
+        )
+        ''');
+    await db.execute('''CREATE INDEX IF NOT EXISTS
+      idx_activity_summaries_activity_data_id
+      ON activity_summaries (activity_data_id)
+    ''');
   }
 }
