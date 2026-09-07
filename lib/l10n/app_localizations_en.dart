@@ -28,6 +28,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get finishHint => 'Finish';
 
   @override
+  String get exportFitFileHint => 'Export to FIT';
+
+  @override
+  String get activityNameHint => 'Activity name';
+
+  @override
+  String get activityNameRequired => 'Enter an activity name';
+
+  @override
   String get resetHint => 'New activity';
 
   @override

@@ -9,6 +9,7 @@ import 'package:glaziovi/features/activity-recorder/activity_recorder_page.dart'
 import 'package:glaziovi/features/home/home_page.dart';
 import 'package:glaziovi/l10n/app_localizations.dart';
 import 'package:glaziovi/l10n/l10n_providers.dart';
+import 'package:glaziovi/navigation/app_route_observer.dart';
 import 'package:glaziovi/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,6 +21,7 @@ void main() {
 
 final _router = GoRouter(
   initialLocation: '/',
+  observers: [appRouteObserver],
   routes: [
     GoRoute(
       path: '/',

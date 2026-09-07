@@ -5,7 +5,7 @@ import 'package:glaziovi/database/database_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 
-final activityDAOProvider = FutureProvider.autoDispose<ActivityDAO>((
+final activityDaoProvider = FutureProvider.autoDispose<ActivityDAO>((
   ref,
 ) async {
   final database = await ref.watch(databaseProvider.future);
@@ -44,7 +44,7 @@ class ActivityDAO {
       'activities',
       where: 'finished_at_ms IS NOT NULL AND status IN (?)',
       whereArgs: ['finished'],
-      orderBy: 'id DESC'
+      orderBy: 'id DESC',
     );
 
     return rows.map((row) => ActivityData.fromMap(row)).toList();

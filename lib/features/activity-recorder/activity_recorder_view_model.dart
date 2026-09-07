@@ -9,7 +9,9 @@ import 'package:glaziovi/activity/activity_sport.dart';
 import 'package:glaziovi/activity/activity_event.dart';
 import 'package:glaziovi/activity/activity_sport_type.dart';
 import 'package:glaziovi/activity/activity_sub_sport_type.dart';
+import 'package:glaziovi/activity/activity_summary.dart';
 import 'package:glaziovi/activity/data-access/activity_dao.dart';
+import 'package:glaziovi/activity/data-access/activity_summary_dao.dart';
 import 'package:glaziovi/features/activity-recorder/activity_recorder_state.dart';
 import 'package:glaziovi/l10n/l10n_providers.dart';
 import 'package:latlong2/latlong.dart';
@@ -54,7 +56,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   /// Load unfinished activity
   Future<void> _loadActivity() async {
     try {
-      final activityDao = await ref.read(activityDAOProvider.future);
+      final activityDao = await ref.read(activityDaoProvider.future);
       final data = await activityDao.findUnfinished();
 
       if (data == null) return;
@@ -118,7 +120,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
 
     await _activityBuffer?.flush();
 
-    final activityDao = await ref.read(activityDAOProvider.future);
+    final activityDao = await ref.read(activityDaoProvider.future);
     await activityDao.updateLifecycle(
       data.id,
       status: status,
@@ -134,7 +136,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
   ) async {
     await _restoreActivity();
     if (_activityData != null) return;
-    final activityDao = await ref.read(activityDAOProvider.future);
+    final activityDao = await ref.read(activityDaoProvider.future);
 
     final data = ActivityData(
       id: 0,
@@ -188,7 +190,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
 
       await _activityBuffer?.dispose();
 
-      final activityDao = await ref.read(activityDAOProvider.future);
+      final activityDao = await ref.read(activityDaoProvider.future);
       await activityDao.deleteActivity(data.id);
 
       _activityBuffer = null;
@@ -255,7 +257,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       }
 
       final startedAt = DateTime.now();
-      final activityDao = await ref.read(activityDAOProvider.future);
+      final activityDao = await ref.read(activityDaoProvider.future);
 
       await activityDao.updateLifecycle(
         _activityData!.id,
@@ -318,7 +320,50 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     await _saveLifecycle(ActivityRecordStatus.paused);
   }
 
-  // TODO: Create auto lap
+  /// Record every distance boundary crossed by an accepted GPS segment.
+  /// Comparing cumulative distances also works after restoring an activity.
+  Future<void> _registerAutoLaps({
+    required double previousDistanceM,
+    required double currentDistanceM,
+    required Position previousPosition,
+    required Position currentPosition,
+  }) async {
+    final buffer = _activityBuffer;
+
+    // TODO: Create lap system for manual and other lap events
+    final lapDistanceM = switch (state.selectedSport?.sport) {
+      ActivitySportType.running || ActivitySportType.walking => 1000,
+      ActivitySportType.cycling => 5000,
+      _ => null,
+    };
+
+    if (buffer == null || lapDistanceM == null) return;
+    if (currentDistanceM <= previousDistanceM) return;
+
+    final firstLap = (previousDistanceM / lapDistanceM).floor() + 1;
+    final lastLap = (currentDistanceM / lapDistanceM).floor();
+    if (firstLap > lastLap) return;
+
+    final startMs = previousPosition.timestamp.millisecondsSinceEpoch;
+    final endMs = currentPosition.timestamp.millisecondsSinceEpoch;
+    final writes = <Future<void>>[];
+
+    for (var lap = firstLap; lap <= lastLap; lap++) {
+      // Estimate the crossing time between the two GPS samples.
+      final fraction =
+          (lap * lapDistanceM - previousDistanceM) /
+          (currentDistanceM - previousDistanceM);
+
+      final timestampMs = startMs + ((endMs - startMs) * fraction).round();
+      writes.add(buffer.addEvent(ActivityEventType.lap, timestampMs));
+    }
+
+    try {
+      await Future.wait(writes);
+    } catch (error, stackTrace) {
+      _handleError(error, stackTrace);
+    }
+  }
 
   /// Resume current paused activity
   Future<void> resume() async {
@@ -400,6 +445,32 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     state = ActivityState(currentPosition: state.currentPosition);
   }
 
+  Future<void> createSummary(String name, VoidCallback onCreated) async {
+    if (_isDeleting || state.status != ActivityStatus.paused) return;
+    if (_activityData == null || _activityData!.id <= 0) return;
+
+    final trimmedName = name.trim();
+
+    try {
+      final activitySummaryDao = await ref.read(
+        activitySummaryDaoProvider.future,
+      );
+
+      final summary = ActivitySummary(
+        id: 0,
+        name: trimmedName.isEmpty ? 'Glaziovi activity' : trimmedName,
+        activityDataId: _activityData!.id,
+        isSynced: false,
+      );
+
+      await activitySummaryDao.createSummary(summary);
+
+      await finish(onCreated);
+    } catch (error, stackTrace) {
+      _handleError(error, stackTrace);
+    }
+  }
+
   void clearError() {
     if (state.error == null) return;
 
@@ -469,7 +540,8 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     if (!state.isRecording) return;
 
     final previousPosition = state.previousPosition;
-    var distanceMeters = state.distanceMeters;
+    final previousDistanceM = state.distanceMeters;
+    var distanceMeters = previousDistanceM;
 
     if (previousPosition != null && _isAcceptablePosition(position)) {
       final segmentDistance = Geolocator.distanceBetween(
@@ -494,12 +566,23 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     _updateElapsed();
 
     _activityBuffer?.addPoint(
-      timestampMs: DateTime.now().millisecondsSinceEpoch,
+      timestampMs: position.timestamp.millisecondsSinceEpoch,
       latitude: position.latitude,
       longitude: position.longitude,
       altitudeM: position.altitude > 0 ? position.altitude : null,
       cumulativeDistanceM: distanceMeters,
     );
+
+    if (previousPosition != null && distanceMeters > previousDistanceM) {
+      unawaited(
+        _registerAutoLaps(
+          previousDistanceM: previousDistanceM,
+          currentDistanceM: distanceMeters,
+          previousPosition: previousPosition,
+          currentPosition: position,
+        ),
+      );
+    }
   }
 
   bool _isAcceptablePosition(Position position) {
@@ -520,8 +603,9 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     final elapsedSeconds = elapsedMilliseconds / 1000;
     final calculatedSpeed = distance / elapsedSeconds;
 
-    // TODO: Check speed by activity type
-    return distance >= 1 && calculatedSpeed <= 15;
+    final maxSpeed =
+        (state.selectedSport ?? ActivitySport.unknown).maxGpsSpeedMps;
+    return distance >= 1 && calculatedSpeed <= maxSpeed;
   }
 
   void _startElapsedTimer() {

@@ -32,6 +32,15 @@ class ActivitySport {
   ActivitySubSportType? get subSport =>
       ActivitySubSportType.fromFit(rawSubSport);
 
+  double get maxGpsSpeedMps => switch (sport) {
+    ActivitySportType.walking || ActivitySportType.running => 15,
+    ActivitySportType.cycling => switch (subSport) {
+      ActivitySubSportType.mountain => 40,
+      _ => 60,
+    },
+    _ => 40,
+  };
+
   bool get isRecognized => sport != null && subSport != null;
 
   bool get isGeneric =>
