@@ -72,8 +72,22 @@ class ActivityBuffer {
     return point;
   }
 
-  Future<void> addEvent(ActivityEventType type, int timestampMs) {
-    _pendingEvents.add(ActivityEvent(timestampMs: timestampMs, type: type));
+  Future<void> addEvent(
+    ActivityEventType type,
+    int timestampMs, {
+    double? cumulativeDistanceM,
+    int? elapsedMs,
+    int? timerMs,
+  }) {
+    _pendingEvents.add(
+      ActivityEvent(
+        timestampMs: timestampMs,
+        type: type,
+        cumulativeDistanceM: cumulativeDistanceM ?? _distanceM,
+        elapsedMs: elapsedMs ?? _elapsed.inMilliseconds,
+        timerMs: timerMs ?? _timer.inMilliseconds,
+      ),
+    );
 
     return flush();
   }

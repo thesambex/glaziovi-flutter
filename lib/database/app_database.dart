@@ -45,6 +45,9 @@ class AppDatabase {
           activity_id INTEGER NOT NULL,
           timestamp_ms INTEGER NOT NULL,
           type TEXT NOT NULL,
+          cumulative_distance_m REAL NOT NULL,
+          elapsed_ms INTEGER NOT NULL,
+          timer_ms INTEGER NOT NULL,
           PRIMARY KEY (activity_id, timestamp_ms, type),
           FOREIGN KEY (activity_id) REFERENCES activities (id) ON DELETE CASCADE
         )

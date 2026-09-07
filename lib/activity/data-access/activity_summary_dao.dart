@@ -25,6 +25,6 @@ class ActivitySummaryDao {
       'SELECT acs.* FROM activity_summaries acs INNER JOIN activities a ON a.id = acs.activity_data_id ORDER BY a.finished_at_ms DESC',
     );
 
-    return rows.map((row) => ActivitySummary.fromMap(row)).toList();
+    return rows.map(ActivitySummary.fromMap).toList();
   }
 }

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:glaziovi/fit/fit_file_type.dart';
 import 'package:glaziovi/fit/fit_header.dart';
+import 'package:glaziovi/fit/fit_lap.dart';
 import 'package:glaziovi/fit/fit_record.dart';
 import 'package:glaziovi/fit/fit_session.dart';
 import 'package:glaziovi/fit/fit_utils.dart';
@@ -9,6 +10,91 @@ import 'package:glaziovi/fit/fit_utils.dart';
 /// Builder to create FIT files. Check Profile.xlsx in FIT SDK and garmin docs (WIP)
 class FitBuilder {
   final _recordsBuffer = BytesBuilder();
+
+  /// Write lap summaries before the session summary.
+  void writeLaps(List<FitLap> laps) {
+    if (laps.isEmpty) return;
+
+    final def = ByteData(6 + 8 * 3);
+
+    // Definition Message: local message type 3 (0x43)
+    def.setUint8(0, 0x43);
+    def.setUint8(1, 0x00);
+    def.setUint8(2, 0x00);
+    def.setUint16(3, 19, Endian.little);
+    def.setUint8(5, 8);
+
+    /* Field definitions */
+
+    // message_index
+    def.setUint8(6, 254);
+    def.setUint8(7, 2);
+    def.setUint8(8, 0x84);
+
+    // timestamp
+    def.setUint8(9, 253);
+    def.setUint8(10, 4);
+    def.setUint8(11, 0x86);
+
+    // start_time
+    def.setUint8(12, 2);
+    def.setUint8(13, 4);
+    def.setUint8(14, 0x86);
+
+    // total_elapsed_time
+    def.setUint8(15, 7);
+    def.setUint8(16, 4);
+    def.setUint8(17, 0x86);
+
+    // total_timer_time
+    def.setUint8(18, 8);
+    def.setUint8(19, 4);
+    def.setUint8(20, 0x86);
+
+    // total_distance
+    def.setUint8(21, 9);
+    def.setUint8(22, 4);
+    def.setUint8(23, 0x86);
+
+    // event
+    def.setUint8(24, 0);
+    def.setUint8(25, 1);
+    def.setUint8(26, 0x00);
+
+    // event_type
+    def.setUint8(27, 1);
+    def.setUint8(28, 1);
+    def.setUint8(29, 0x00);
+
+    _recordsBuffer.add(def.buffer.asUint8List());
+
+    for (final lap in laps) {
+      final data = ByteData(25);
+
+      // Data Message: local message type 3 (0x03)
+      data.setUint8(0, 0x03);
+      data.setUint16(1, lap.messageIndex, Endian.little);
+      data.setUint32(
+        3,
+        FitUtils.toGarminTimestamp(lap.timestamp),
+        Endian.little,
+      );
+      data.setUint32(
+        7,
+        FitUtils.toGarminTimestamp(lap.startTime),
+        Endian.little,
+      );
+
+      // FIT duration scale is 1000; the model already uses milliseconds.
+      data.setUint32(11, lap.totalElapsedTime, Endian.little);
+      data.setUint32(15, lap.totalTimerTime, Endian.little);
+      data.setUint32(19, (lap.totalDistance * 100).round(), Endian.little);
+      data.setUint8(23, 9); // Lap event
+      data.setUint8(24, 1); // Stop event
+
+      _recordsBuffer.add(data.buffer.asUint8List());
+    }
+  }
 
   void writeActivity({required FitSession session}) {
     final def = ByteData(6 + 7 * 3);

@@ -60,6 +60,17 @@ class ActivityDAO {
     return rows.map(ActivityTrackPoint.fromMap).toList();
   }
 
+  Future<List<ActivityEvent>> getEvents(int activityId) async {
+    final rows = await _database.query(
+      'activity_events',
+      where: 'activity_id = ?',
+      whereArgs: [activityId],
+      orderBy: 'timestamp_ms',
+    );
+
+    return rows.map((ActivityEvent.fromMap)).toList();
+  }
+
   Future<void> updateLifecycle(
     int activityId, {
     required ActivityRecordStatus status,

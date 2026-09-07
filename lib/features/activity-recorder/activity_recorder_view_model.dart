@@ -355,7 +355,27 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
           (currentDistanceM - previousDistanceM);
 
       final timestampMs = startMs + ((endMs - startMs) * fraction).round();
-      writes.add(buffer.addEvent(ActivityEventType.lap, timestampMs));
+      final activityStart = state.startedAt;
+      final recordingStart = _recordingStartedAt;
+      if (activityStart == null || recordingStart == null) return;
+
+      final elapsedMs = (timestampMs - activityStart.millisecondsSinceEpoch)
+          .clamp(0, 0xFFFFFFFF);
+      final activeSegmentMs =
+          (timestampMs - recordingStart.millisecondsSinceEpoch).clamp(
+            0,
+            0xFFFFFFFF,
+          );
+      writes.add(
+        buffer.addEvent(
+          ActivityEventType.lap,
+          timestampMs,
+          cumulativeDistanceM: (lap * lapDistanceM).toDouble(),
+          elapsedMs: elapsedMs,
+          timerMs:
+              _elapsedBeforeCurrentRecording.inMilliseconds + activeSegmentMs,
+        ),
+      );
     }
 
     try {
