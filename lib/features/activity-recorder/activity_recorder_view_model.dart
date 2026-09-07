@@ -412,7 +412,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
       final activitySummaryDao = await ref.read(
         activitySummaryDaoProvider.future,
       );
-      
+
       final summary = ActivitySummary(
         id: 0,
         name: trimmedName.isEmpty ? 'Glaziovi activity' : trimmedName,
@@ -548,8 +548,9 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     final elapsedSeconds = elapsedMilliseconds / 1000;
     final calculatedSpeed = distance / elapsedSeconds;
 
-    // TODO: Check speed by activity type
-    return distance >= 1 && calculatedSpeed <= 15;
+    final maxSpeed =
+        (state.selectedSport ?? ActivitySport.unknown).maxGpsSpeedMps;
+    return distance >= 1 && calculatedSpeed <= maxSpeed;
   }
 
   void _startElapsedTimer() {
