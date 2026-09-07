@@ -5,6 +5,7 @@ import 'package:glaziovi/activity/data-access/activity_dao.dart';
 import 'package:glaziovi/fit/fit_builder.dart';
 import 'package:glaziovi/fit/fit_file_type.dart';
 import 'package:glaziovi/fit/fit_record.dart';
+import 'package:glaziovi/fit/fit_session.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -45,13 +46,27 @@ class HomePageViewModel extends _$HomePageViewModel {
     final deviceInfo = DeviceInfoPlugin();
     final androidDeviceInfo = await deviceInfo.androidInfo;
 
+    final activitySession = FitSession(
+      startTime: DateTime.fromMillisecondsSinceEpoch(activity.startedAtMs),
+      timestamp: DateTime.fromMillisecondsSinceEpoch(
+        activity.finishedAtMs ?? 0,
+      ),
+      totalElapsedTime: activity.elapsedMs,
+      totalTimerTime: activity.timerMs,
+      totalDistance: activity.distanceM,
+      sport: activity.sport,
+      subSport: activity.subSport,
+    );
+
     final fitBuilder = FitBuilder();
+
     fitBuilder.writeField(
       fileType: FitFileType.activity,
-      createdAt: DateTime.now(),
+      createdAt: activitySession.startTime,
       deviceUuid: androidDeviceInfo.id,
     );
     fitBuilder.writeRecords(fitTrackPoints);
+    fitBuilder.writeSession(session: activitySession);
 
     final fitData = fitBuilder.build();
 
