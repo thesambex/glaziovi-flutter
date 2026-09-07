@@ -4,7 +4,7 @@ import 'package:glaziovi/activity/activity_event.dart';
 import 'package:glaziovi/activity/activity_track_point.dart';
 import 'package:glaziovi/activity/data-access/activity_dao.dart';
 
-/// Stores a buffer o location points and events to avoid excessive IO database calls
+/// Stores a buffer o location points and events to avoid excessive I/O database calls
 class ActivityBuffer {
   ActivityBuffer({
     required this._activityId,

@@ -492,6 +492,7 @@ class ActivityRecorderViewModel extends _$ActivityRecorderViewModel {
     );
 
     _updateElapsed();
+
     _activityBuffer?.addPoint(
       timestampMs: DateTime.now().millisecondsSinceEpoch,
       latitude: position.latitude,

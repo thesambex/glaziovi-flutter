@@ -28,13 +28,23 @@ class ActivityDAO {
     return rows.isEmpty ? null : ActivityData.fromMap(rows.single);
   }
 
+  Future<ActivityData?> findById(int id) async {
+    final rows = await _database.query(
+      'activities',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    return rows.isEmpty ? null : ActivityData.fromMap(rows.single);
+  }
+
   Future<List<ActivityData>> listFinished() async {
     final rows = await _database.query(
       'activities',
       where: 'finished_at_ms IS NOT NULL AND status IN (?)',
       whereArgs: ['finished'],
-      orderBy: 'id DESC',
-      limit: 1,
+      orderBy: 'id DESC'
     );
 
     return rows.map((row) => ActivityData.fromMap(row)).toList();
