@@ -35,7 +35,7 @@ class ActivitySport {
   double get maxGpsSpeedMps => switch (sport) {
     ActivitySportType.walking || ActivitySportType.running => 15,
     ActivitySportType.cycling => switch (subSport) {
-      ActivitySubSportType.mountain => 35,
+      ActivitySubSportType.mountain => 40,
       _ => 60,
     },
     _ => 40,
